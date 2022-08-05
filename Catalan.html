@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Catalan</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+        }
+        
+        #box {
+            position: absolute;
+            left: 50px;
+            top: 50px;
+            border: 1px solid #212223;
+            border-right: none;
+            height: 50px;
+            width: 400px;
+            line-height: 50px;
+            cursor: pointer;
+        }
+        
+        .ball {
+            position: absolute;
+            top: 200px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            line-height: 48px;
+            text-align: center;
+            overflow: hidden;
+            background-color: #ffbd0b;
+            color: #fff;
+            transition: all .15s;
+        }
+        
+        #Pon {
+            background-color: #47af50;
+        }
+        
+        #Lin {
+            background-color: #00b5ad;
+        }
+        
+        #Wil {
+            background-color: #2185d0;
+        }
+        
+        #Mup {
+            background-color: #e03997;
+        }
+        
+        .abandoned {
+            background-color: #dedede !important;
+            color: #212223 !important;
+        }
+        
+        #queShow {
+            position: absolute;
+            top: 120px;
+            left: 50px;
+        }
+        
+        .inQue {
+            color: #db2828;
+        }
+        
+        .outQue {
+            color: #adadad;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="box" onclick="start()">Click Me To Start</div>
+    <div id="queShow"></div>
+    <div id="ballbox">
+    </div>
+    <script>
+        let Balls = ['Pon', 'Lin', 'Wil', 'Mup', 'Yem']
+        let box = document.getElementById("box")
+        let ballBox = document.getElementById("ballbox")
+        let queShow = document.getElementById("queShow")
+
+        function Ball(name, left) {
+            this.num = left
+            this.ele = document.createElement("div")
+            this.ele.classList.add('ball')
+            this.ele.id = name
+            this.ele.innerHTML = name
+            this.ele.style.left = `${50+left*50}px`
+            this.name = name
+            ballBox.appendChild(this.ele)
+        }
+        for (let ball in Balls) {
+            Balls[ball] = new Ball(Balls[ball], ball)
+        }
+        let boxLength = 50 * Balls.length
+        let boxRight = 50 * Balls.length + 100
+        box.style.width = `${boxLength}px`
+
+        function GenQue(n) {
+            let gen = []
+            let all = []
+            for (let i = 0; i < (n << 1); ++i)
+                all.push('In')
+            let outCount = 0
+            let sumCount = 0
+
+            function dfs(u) {
+                if (u >= (n << 1)) {
+                    outCount = 0
+                    sumCount = 0
+                    for (let i in all) {
+                        if (all[i] === 'Out')
+                            sumCount -= 1, outCount += 1
+                        else
+                            sumCount += 1
+                        if (sumCount < 0)
+                            return
+                    }
+                    if (outCount !== n)
+                        return
+                    gen.push([...all])
+                    return
+                }
+                all[u] = 'In'
+                dfs(u + 1)
+                all[u] = 'Out'
+                dfs(u + 1)
+            }
+            dfs(0)
+            return gen
+        }
+
+        let rbStack = []
+        let ballBucket = [...Balls]
+        let abandoned = []
+
+        function Push(k) {
+            k.style.left = `${boxRight}px`
+            setTimeout(function() {
+                k.style.top = '51px'
+            }, 200)
+            setTimeout(function() {
+                k.style.left = `${51+50*rbStack.length}px`
+                rbStack.push(ballBucket.pop())
+            }, 400)
+        }
+
+        function Pop(k) {
+            k.style.left = `${boxRight}px`
+            setTimeout(function() {
+                k.style.top = '300px'
+            }, 200)
+            setTimeout(function() {
+                abandoned.push(rbStack.pop())
+                k.style.left = `${50*abandoned.length}px`
+                k.classList.add('abandoned')
+            }, 400)
+        }
+
+        function Reset() {
+            abandoned = []
+            ballBucket = [...Balls]
+            for (let i in Balls) {
+                Balls[i].ele.style.top = '200px'
+                Balls[i].ele.style.left = `${50+i*50}px`
+                Balls[i].ele.classList.remove('abandoned')
+            }
+        }
+
+        function genMoves() {
+            let moves = []
+            let MoveQue = GenQue(Balls.length)
+            for (let i in MoveQue) {
+                let inStack = []
+                let outStack = [...Balls]
+                let oneMove = []
+                for (let j in MoveQue[i]) {
+                    let MoveElement = document.createElement("span")
+                    if (MoveQue[i][j] === "In") {
+                        //console.log("Push", outStack[outStack.length - 1].name)
+                        oneMove.push({
+                            p: 0,
+                            q: outStack[outStack.length - 1].num
+                        })
+                        inStack.push(outStack.pop())
+                    } else {
+                        //console.log("Pop", inStack[inStack.length - 1].name)
+                        oneMove.push({
+                            p: 1,
+                            q: inStack[inStack.length - 1].num
+                        })
+                        inStack.pop()
+                    }
+                }
+                moves.push([...oneMove])
+            }
+            return moves
+        }
+
+        function genAnimation() {
+            let ani = []
+            ani.push({
+                p: 2
+            })
+            let MoveQue = GenQue(Balls.length)
+            for (let i in MoveQue) {
+                let inStack = []
+                let outStack = [...Balls]
+                let oneMove = []
+                for (let j in MoveQue[i]) {
+                    let MoveElement = document.createElement("span")
+                    if (MoveQue[i][j] === "In") {
+                        //console.log("Push", outStack[outStack.length - 1].name)
+                        ani.push({
+                            p: 0,
+                            q: outStack[outStack.length - 1].num
+                        })
+                        inStack.push(outStack.pop())
+                    } else {
+                        //console.log("Pop", inStack[inStack.length - 1].name)
+                        ani.push({
+                            p: 1,
+                            q: inStack[inStack.length - 1].num
+                        })
+                        inStack.pop()
+                    }
+                }
+                ani.push({
+                    p: 2
+                })
+            }
+            return ani
+        }
+
+        function start() {
+            let g = genAnimation()
+            let h = genMoves()
+            let timeCount = 0
+            let moveCount = -1
+            box.innerHTML = ""
+            for (let i in g) {
+                if (g[i].p === 0) {
+                    setTimeout(function() {
+                        Push(Balls[g[i].q].ele)
+                    }, timeCount)
+                    timeCount += 600
+                } else if (g[i].p === 1) {
+                    setTimeout(function() {
+                        Pop(Balls[g[i].q].ele)
+                    }, timeCount)
+                    timeCount += 600
+                } else if (g[i].p === 2) {
+                    timeCount += 300
+                    setTimeout(function() {
+                        Reset()
+                        moveCount += 1
+                        if (moveCount < h.length) {
+                            queShow.innerHTML = `(${moveCount+1}/${h.length})`
+                            for (let i in h[moveCount]) {
+                                queShow.innerHTML += "-"
+                                let ne = document.createElement("span")
+                                if (h[moveCount][i].p === 0)
+                                    ne.classList.add("inQue")
+                                else
+                                    ne.classList.add("outQue")
+                                ne.innerHTML = Balls[h[moveCount][i].q].name
+                                queShow.appendChild(ne)
+                            }
+                        } else {
+                            queShow.innerHTML = "Done"
+                        }
+                    }, timeCount)
+                    timeCount += 200
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
